@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import AuthPage from './AuthPage'
 
-const PROJECT_SLUG = 'subscriptions'
+const PROJECT_SLUG = 'subs'
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
