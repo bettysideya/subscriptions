@@ -10,10 +10,14 @@ interface Subscription {
   renewalDay: string
   frequency: 'monthly' | 'annual'
   assignee: 'ACM' | 'AMPA' | 'Betty'
+  category: string
 }
+
+const DEFAULT_CATEGORIES = ['TV', 'Internet', 'Office', 'Health']
 
 interface AppState {
   subscriptions: Subscription[]
+  categories: string[]
 }
 
 const STORAGE_KEY = 'subscriptions-app-state'
@@ -23,13 +27,21 @@ function newId() {
 }
 
 function defaultState(): AppState {
-  return { subscriptions: [] }
+  return { subscriptions: [], categories: DEFAULT_CATEGORIES }
 }
 
 function loadState(): AppState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (!parsed.categories) parsed.categories = DEFAULT_CATEGORIES
+      parsed.subscriptions = (parsed.subscriptions || []).map((s: Subscription) => ({
+        ...s,
+        category: s.category || '',
+      }))
+      return parsed
+    }
   } catch { /* ignore */ }
   return defaultState()
 }
@@ -75,6 +87,7 @@ export default function SubscriptionsApp() {
           renewalDay: '1',
           frequency: 'monthly',
           assignee: 'ACM',
+          category: '',
         },
       ],
     }))
@@ -155,6 +168,7 @@ export default function SubscriptionsApp() {
               <thead>
                 <tr className="border-b text-gray-400 uppercase text-xs tracking-wider" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
                   <th className="py-3 px-3 text-left">Name</th>
+                  <th className="py-3 px-2 text-center">Category</th>
                   <th className="py-3 px-2 text-right">Amount</th>
                   <th className="py-3 px-2 text-center">Frequency</th>
                   <th className="py-3 px-2 text-center">Renewal</th>
@@ -182,6 +196,35 @@ export default function SubscriptionsApp() {
                           className="w-full px-2 py-1.5 text-sm rounded-lg border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
                           style={{ background: 'rgba(255,255,255,0.05)' }}
                         />
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <select
+                          value={sub.category}
+                          onChange={e => {
+                            const val = e.target.value
+                            if (val === '__add__') {
+                              const name = prompt('New category name:')
+                              if (name && name.trim()) {
+                                const trimmed = name.trim()
+                                setState(prev => ({
+                                  ...prev,
+                                  categories: prev.categories.includes(trimmed) ? prev.categories : [...prev.categories, trimmed],
+                                  subscriptions: prev.subscriptions.map(s => s.id === sub.id ? { ...s, category: trimmed } : s),
+                                }))
+                              }
+                            } else {
+                              updateSub(sub.id, 'category', val)
+                            }
+                          }}
+                          className="px-2 py-1.5 text-sm rounded-lg border border-white/10 text-white focus:outline-none focus:border-indigo-500/50 transition-colors appearance-none text-center"
+                          style={{ background: 'rgba(255,255,255,0.05)' }}
+                        >
+                          <option value="">—</option>
+                          {state.categories.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                          <option value="__add__">+ Add…</option>
+                        </select>
                       </td>
                       <td className="py-2 px-2">
                         <input
@@ -267,6 +310,7 @@ export default function SubscriptionsApp() {
                       Add Subscription
                     </button>
                   </td>
+                  <td className="py-3 px-2"></td>
                   <td className="py-3 px-2"></td>
                   <td className="py-3 px-2"></td>
                   <td className="py-3 px-2"></td>
